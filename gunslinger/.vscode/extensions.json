@@ -1,0 +1,6 @@
+{
+  "recommendations": [
+    "cloudflare.cloudflare-workers-bindings",
+    "dbaeumer.vscode-eslint"
+  ]
+}
