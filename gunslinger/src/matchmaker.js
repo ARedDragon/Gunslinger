@@ -6,11 +6,13 @@ const VALID_MOVES = ['load', 'shoot', 'dodge', 'aim', 'fanfire'];
 const DEFAULT_RATING = 1000;
 const FLOOR_RATING = 100;
 const MAX_CHAT_MESSAGES = 60;
+const NAME_CHANGE_COOLDOWN_MS = 60 * 60 * 1000;
+const ADMIN_HANDLES = new Set(['jaydenlian']);
 
 export class Matchmaker {
   constructor(state) {
     this.state = state;
-    this.clients = new Map(); // id -> {ws,name,rating,inQueue,joinedAt,roomId,role}
+    this.clients = new Map(); // id -> {ws,name,handle,rating,inQueue,joinedAt,roomId,role}
     this.queue = []; // client ids
     this.rooms = new Map(); // roomId -> room
     this.profilesCache = null;
@@ -41,9 +43,19 @@ export class Matchmaker {
     }
 
     if (url.pathname === '/api/profile' && request.method === 'GET') {
+      const handle = sanitizeHandle(url.searchParams.get('handle') || '');
       const name = sanitizeName(url.searchParams.get('name') || '');
-      if (!name) return Response.json({ error: 'Invalid name' }, { status: 400 });
-      const profile = await this.getOrCreateProfile(name);
+      if (!handle) return Response.json({ error: 'Handle is required' }, { status: 400 });
+      const profile = await this.getOrCreateProfile({
+        handle,
+        name: name || 'Outlaw',
+      });
+
+      const updated = await this.applyNameChange(profile, name);
+      if (updated.changed) {
+        await this.saveProfile(profile);
+      }
+
       return Response.json({ profile });
     }
 
@@ -76,6 +88,7 @@ export class Matchmaker {
     this.clients.set(id, {
       ws: server,
       name: 'Outlaw',
+      handle: '',
       rating: DEFAULT_RATING,
       inQueue: false,
       joinedAt: Date.now(),
@@ -111,13 +124,44 @@ export class Matchmaker {
 
     if (msg.type === 'hello' || msg.type === 'intro') {
       const safe = sanitizeName(msg.name || '');
-      if (safe) {
-        client.name = safe;
-        const profile = await this.getOrCreateProfile(safe);
-        client.rating = profile.rating;
+      const safeHandle = sanitizeHandle(msg.handle || client.handle || safe);
+      if (!safeHandle) {
+        this.sendTo(id, { type: 'identity_required', message: 'Handle is required.' });
+        return;
       }
+      client.handle = safeHandle;
+
+      if (await this.isBannedHandle(client.handle)) {
+        this.sendTo(id, { type: 'banned', message: 'This handle is banned from the server.' });
+        try {
+          client.ws.close(4003, 'Banned');
+        } catch {}
+        return;
+      }
+
+      const profile = await this.getOrCreateProfile({
+        handle: client.handle,
+        name: safe || client.name || 'Outlaw',
+      });
+      const updated = await this.applyNameChange(profile, safe);
+      if (updated.changed) {
+        await this.saveProfile(profile);
+      }
+
+      client.name = profile.name;
+      client.handle = profile.handle;
+      client.rating = profile.rating;
+
       this.sendTo(id, { type: 'global_chat_history', items: this.globalChat });
       this.sendTo(id, { type: 'online_count', online: this.clients.size });
+      this.sendTo(id, {
+        type: 'identity',
+        name: client.name,
+        handle: client.handle,
+        coins: Number(profile.coins) || 0,
+        isAdmin: ADMIN_HANDLES.has(client.handle),
+        nameLockedUntil: profile.nameLockedUntil || 0,
+      });
       if (msg.type === 'intro' && !client.roomId) {
         this.enqueueClient(id);
         this.tryMatchmake();
@@ -151,6 +195,27 @@ export class Matchmaker {
       if (this.globalChat.length > MAX_CHAT_MESSAGES) this.globalChat.shift();
       await this.state.storage.put('globalChat', this.globalChat);
       this.broadcastAll({ type: 'global_chat', item });
+      return;
+    }
+
+    if (msg.type === 'report_user') {
+      await this.handleReport(client, msg);
+      return;
+    }
+
+    if (msg.type === 'admin_ban' || msg.type === 'admin_give_coins' || msg.type === 'admin_announce') {
+      if (!ADMIN_HANDLES.has(client.handle)) {
+        this.sendTo(id, { type: 'admin_result', ok: false, message: 'Not authorized.' });
+        return;
+      }
+
+      if (msg.type === 'admin_ban') {
+        await this.handleAdminBan(client, msg);
+      } else if (msg.type === 'admin_give_coins') {
+        await this.handleAdminGiveCoins(client, msg);
+      } else {
+        this.handleAdminAnnounce(client, msg);
+      }
       return;
     }
 
@@ -195,6 +260,126 @@ export class Matchmaker {
 
   broadcastOnlineCount() {
     this.broadcastAll({ type: 'online_count', online: this.clients.size });
+  }
+
+  async isBannedHandle(handle) {
+    if (!handle) return false;
+    const data = await this.state.storage.get(`ban:${handle}`);
+    return !!data;
+  }
+
+  findClientByHandle(handle) {
+    for (const [id, client] of this.clients.entries()) {
+      if (client.handle === handle) return { id, client };
+    }
+    return null;
+  }
+
+  async handleReport(reporter, msg) {
+    const targetHandle = sanitizeHandle(msg.targetHandle || '');
+    const targetName = sanitizeName(msg.targetName || '');
+    const reason = String(msg.reason || '').trim().slice(0, 300);
+    if (!targetHandle || !reason) {
+      this.sendToClient(reporter, { type: 'report_received', ok: false, message: 'Invalid report.' });
+      return;
+    }
+    if (targetHandle === reporter.handle) {
+      this.sendToClient(reporter, { type: 'report_received', ok: false, message: 'Cannot report yourself.' });
+      return;
+    }
+
+    const key = `report:${Date.now()}:${Math.floor(Math.random() * 100000)}`;
+    await this.state.storage.put(key, {
+      reporterHandle: reporter.handle,
+      reporterName: reporter.name,
+      targetHandle,
+      targetName,
+      reason,
+      context: String(msg.context || '').slice(0, 80),
+      createdAt: Date.now(),
+    });
+
+    this.sendToClient(reporter, { type: 'report_received', ok: true, message: 'Report sent to admins.' });
+  }
+
+  async handleAdminBan(admin, msg) {
+    const targetHandle = sanitizeHandle(msg.targetHandle || '');
+    const reason = String(msg.reason || '').trim().slice(0, 200);
+    if (!targetHandle) {
+      this.sendToClient(admin, { type: 'admin_result', ok: false, message: 'Target handle required.' });
+      return;
+    }
+    if (ADMIN_HANDLES.has(targetHandle)) {
+      this.sendToClient(admin, { type: 'admin_result', ok: false, message: 'Cannot ban admin handle.' });
+      return;
+    }
+
+    await this.state.storage.put(`ban:${targetHandle}`, {
+      by: admin.handle,
+      reason,
+      at: Date.now(),
+    });
+
+    const found = this.findClientByHandle(targetHandle);
+    if (found) {
+      this.sendTo(found.id, { type: 'banned', message: reason || 'You were banned by an admin.' });
+      try {
+        found.client.ws.close(4003, 'Banned');
+      } catch {}
+    }
+
+    this.sendToClient(admin, { type: 'admin_result', ok: true, message: `Banned @${targetHandle}.` });
+  }
+
+  async handleAdminGiveCoins(admin, msg) {
+    const targetHandle = sanitizeHandle(msg.targetHandle || '');
+    const delta = Math.trunc(Number(msg.amount));
+    if (!targetHandle || !Number.isFinite(delta) || delta === 0) {
+      this.sendToClient(admin, { type: 'admin_result', ok: false, message: 'Valid target handle and non-zero amount required.' });
+      return;
+    }
+
+    const profile = await this.getOrCreateProfile({
+      handle: targetHandle,
+      name: targetHandle,
+    });
+    profile.coins = Math.max(0, (Number(profile.coins) || 0) + delta);
+    await this.saveProfile(profile);
+
+    const found = this.findClientByHandle(targetHandle);
+    if (found) {
+      this.sendTo(found.id, { type: 'coins_update', coins: profile.coins });
+      this.sendTo(found.id, { type: 'server_message', message: `Admin adjusted your coins by ${delta}.` });
+    }
+
+    this.sendToClient(admin, {
+      type: 'admin_result',
+      ok: true,
+      message: `Updated @${targetHandle} coins by ${delta}. New balance: ${profile.coins}.`,
+    });
+  }
+
+  handleAdminAnnounce(admin, msg) {
+    const text = String(msg.text || '').trim().slice(0, 240);
+    if (!text) {
+      this.sendToClient(admin, { type: 'admin_result', ok: false, message: 'Message cannot be empty.' });
+      return;
+    }
+
+    this.broadcastAll({
+      type: 'server_message',
+      message: text,
+      from: `@${admin.handle}`,
+      ts: Date.now(),
+    });
+    this.sendToClient(admin, { type: 'admin_result', ok: true, message: 'Announcement sent.' });
+  }
+
+  sendToClient(client, msg) {
+    if (!client?.ws) return;
+    try {
+      client.ws.send(JSON.stringify(msg));
+    } catch {}
   }
 
   sendTo(id, msg) {
@@ -304,6 +489,8 @@ export class Matchmaker {
         type: 'player_names',
         host: first.name || 'Host',
         guest: second.name || 'Guest',
+        hostHandle: first.handle || '',
+        guestHandle: second.handle || '',
       });
 
       this.armTurnTimer(room);
@@ -497,7 +684,7 @@ export class Matchmaker {
   armTurnTimer(room) {
     this.clearTurnTimer(room);
     room.turnTimer = setTimeout(() => {
-      this.handleRoundInactivity(room.id);
+      this.handleRoundInactivity(room.id).catch(() => {});
     }, ROUND_INACTIVITY_MS);
   }
 
@@ -507,7 +694,7 @@ export class Matchmaker {
     room.turnTimer = null;
   }
 
-  handleRoundInactivity(roomId) {
+  async handleRoundInactivity(roomId) {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
@@ -545,6 +732,21 @@ export class Matchmaker {
 
     const host = this.clients.get(room.hostId);
     const guest = this.clients.get(room.guestId);
+
+    await this.recordMatch({
+      matchId: room.id,
+      mode: 'online',
+      player: host?.name || 'Host',
+      playerHandle: host?.handle || sanitizeHandle(host?.name || 'host'),
+      opponent: guest?.name || 'Guest',
+      opponentHandle: guest?.handle || sanitizeHandle(guest?.name || 'guest'),
+      hostHandle: host?.handle || sanitizeHandle(host?.name || 'host'),
+      guestHandle: guest?.handle || sanitizeHandle(guest?.name || 'guest'),
+      myScore: game.host.score,
+      oppScore: game.guest.score,
+      inactive: round.inactive,
+    });
+
     if (host) {
       host.roomId = null;
       host.role = null;
@@ -562,38 +764,68 @@ export class Matchmaker {
     const map = new Map();
     const list = await this.state.storage.list({ prefix: 'profile:' });
     for (const [, value] of list) {
-      if (value?.name) map.set(value.name, value);
+      if (!value) continue;
+      const handle = sanitizeHandle(value.handle || value.name || '');
+      if (!handle) continue;
+      if (!value.name) value.name = handle;
+      value.handle = handle;
+      map.set(handle, value);
     }
     this.profilesCache = map;
     return map;
   }
 
-  async getOrCreateProfile(name) {
-    const safe = sanitizeName(name);
-    if (!safe) return null;
+  async getOrCreateProfile(identity) {
+    const desiredHandle = sanitizeHandle(identity?.handle || identity?.name || '');
+    const desiredName = sanitizeName(identity?.name || '') || 'Outlaw';
+    if (!desiredHandle) return null;
 
     const profiles = await this.getProfilesMap();
-    let profile = profiles.get(safe);
+    let profile = profiles.get(desiredHandle);
     if (!profile) {
       profile = {
-        name: safe,
+        handle: desiredHandle,
+        name: desiredName,
         rating: DEFAULT_RATING,
         wins: 0,
         games: 0,
+        coins: 0,
+        nameChangedAt: Date.now(),
+        nameLockedUntil: 0,
         updatedAt: Date.now(),
       };
-      profiles.set(safe, profile);
-      await this.state.storage.put(`profile:${safe}`, profile);
+      profiles.set(desiredHandle, profile);
+      await this.state.storage.put(`profile:${desiredHandle}`, profile);
     }
 
     return profile;
   }
 
+  async applyNameChange(profile, requestedName) {
+    const safe = sanitizeName(requestedName || '');
+    if (!safe || safe === profile.name) {
+      return { changed: false };
+    }
+
+    const now = Date.now();
+    const nextAllowed = (profile.nameChangedAt || 0) + NAME_CHANGE_COOLDOWN_MS;
+    if (profile.name && now < nextAllowed) {
+      profile.nameLockedUntil = nextAllowed;
+      return { changed: false };
+    }
+
+    profile.name = safe;
+    profile.nameChangedAt = now;
+    profile.nameLockedUntil = 0;
+    return { changed: true };
+  }
+
   async saveProfile(profile) {
+    if (!Number.isFinite(Number(profile.coins))) profile.coins = 0;
     profile.updatedAt = Date.now();
     const profiles = await this.getProfilesMap();
-    profiles.set(profile.name, profile);
-    await this.state.storage.put(`profile:${profile.name}`, profile);
+    profiles.set(profile.handle, profile);
+    await this.state.storage.put(`profile:${profile.handle}`, profile);
   }
 
   async recordMatch(data) {
@@ -604,7 +836,10 @@ export class Matchmaker {
     const exists = await this.state.storage.get(`match:${matchId}`);
     if (exists) return { ok: true, payload: { deduped: true } };
 
-    const player = await this.getOrCreateProfile(data.player || '');
+    const player = await this.getOrCreateProfile({
+      handle: data.playerHandle || data.player || '',
+      name: data.player || '',
+    });
     if (!player) return { ok: false, error: 'Invalid player' };
 
     if (mode === 'ai') {
@@ -626,9 +861,12 @@ export class Matchmaker {
       return { ok: true, payload: { mode, profiles: [player] } };
     }
 
-    const opponent = await this.getOrCreateProfile(data.opponent || '');
+    const opponent = await this.getOrCreateProfile({
+      handle: data.opponentHandle || data.opponent || '',
+      name: data.opponent || '',
+    });
     if (!opponent) return { ok: false, error: 'Invalid opponent' };
-    if (opponent.name === player.name) return { ok: false, error: 'Player and opponent must differ' };
+    if (opponent.handle === player.handle) return { ok: false, error: 'Player and opponent must differ' };
 
     const myScore = Number(data.myScore);
     const oppScore = Number(data.oppScore);
@@ -647,11 +885,28 @@ export class Matchmaker {
     }
 
     const k = 24;
+    const oldPlayerRating = player.rating;
+    const oldOpponentRating = opponent.rating;
     const expectedA = expectedScore(player.rating, opponent.rating);
     const expectedB = expectedScore(opponent.rating, player.rating);
 
     player.rating = Math.max(FLOOR_RATING, Math.round(player.rating + k * (scoreA - expectedA)));
     opponent.rating = Math.max(FLOOR_RATING, Math.round(opponent.rating + k * (scoreB - expectedB)));
+
+    if (data.inactive === 'host' || data.inactive === 'guest') {
+      const hostHandle = sanitizeHandle(data.hostHandle || '');
+      const guestHandle = sanitizeHandle(data.guestHandle || '');
+      const inactiveHandle = data.inactive === 'host' ? hostHandle : guestHandle;
+      if (inactiveHandle) {
+        if (player.handle === inactiveHandle) {
+          const normalLoss = Math.max(0, oldPlayerRating - player.rating);
+          player.rating = Math.max(FLOOR_RATING, player.rating - normalLoss);
+        } else if (opponent.handle === inactiveHandle) {
+          const normalLoss = Math.max(0, oldOpponentRating - opponent.rating);
+          opponent.rating = Math.max(FLOOR_RATING, opponent.rating - normalLoss);
+        }
+      }
+    }
 
     player.games += 1;
     opponent.games += 1;
@@ -672,6 +927,14 @@ function sanitizeName(name) {
     .replace(/\s+/g, ' ')
     .replace(/[^a-zA-Z0-9 _-]/g, '')
     .slice(0, 20);
+}
+
+function sanitizeHandle(handle) {
+  return String(handle || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '')
+    .slice(0, 12);
 }
 
 function sanitizeChat(text) {

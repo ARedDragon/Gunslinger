@@ -123,7 +123,7 @@
 
   .topbar {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto auto auto;
     gap: 10px;
     border-bottom: 1px solid var(--line);
     padding: 12px;
@@ -477,6 +477,153 @@
     margin-right: 6px;
   }
 
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 2, 1, 0.78);
+    display: grid;
+    place-items: center;
+    z-index: 40;
+    backdrop-filter: blur(5px);
+  }
+
+  .overlay-card {
+    width: min(560px, calc(100vw - 28px));
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: linear-gradient(155deg, rgba(44, 20, 11, 0.95), rgba(19, 9, 5, 0.95));
+    padding: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    display: grid;
+    gap: 10px;
+  }
+
+  .overlay-card h3 {
+    font-family: 'Rye', cursive;
+    color: var(--accent);
+    font-size: 1.08rem;
+  }
+
+  .overlay-card p {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .identity-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .identity-row input {
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.32);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.86rem;
+    letter-spacing: 0.08em;
+    text-transform: lowercase;
+  }
+
+  .case-open-card {
+    width: min(940px, calc(100vw - 28px));
+    display: grid;
+    gap: 10px;
+  }
+
+  .case-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .case-head strong {
+    color: var(--accent);
+    font-family: 'Rye', cursive;
+    letter-spacing: 0.05em;
+  }
+
+  .case-reel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: radial-gradient(circle at 50% 20%, rgba(255, 185, 90, 0.2), rgba(0, 0, 0, 0.42));
+    min-height: 156px;
+  }
+
+  .case-track {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+
+  .case-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    background: linear-gradient(180deg, transparent, var(--accent), transparent);
+    box-shadow: 0 0 16px rgba(247, 179, 74, 0.75);
+    pointer-events: none;
+  }
+
+  .case-item {
+    width: 138px;
+    min-height: 126px;
+    border: 1px solid rgba(247, 179, 74, 0.32);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.34);
+    display: grid;
+    gap: 6px;
+    align-content: center;
+    justify-items: center;
+    padding: 8px;
+    text-align: center;
+    flex: 0 0 auto;
+  }
+
+  .case-item img {
+    width: 100px;
+    height: 42px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.6));
+  }
+
+  .case-item span {
+    color: var(--text);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+  }
+
+  .case-result {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 10px;
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+
+  .admin-grid {
+    display: grid;
+    gap: 8px;
+  }
+
+  .admin-grid .join-box input {
+    text-transform: none;
+    letter-spacing: 0.03em;
+    text-align: left;
+  }
+
   .hidden { display: none !important; }
 
   @media (max-width: 920px) {
@@ -499,6 +646,7 @@
     <div class="shell">
       <div class="topbar">
         <input id="player-name" class="name-input" maxlength="20" placeholder="Your outlaw name">
+        <div class="chip">Handle: <strong id="chip-handle">unset</strong></div>
         <div class="chip">Rating: <strong id="chip-rating">1000</strong></div>
         <div class="chip">Coins: <strong id="chip-coins">0</strong></div>
         <div class="chip">Online: <strong id="chip-online">0</strong></div>
@@ -542,6 +690,26 @@
               <button onclick="sendGlobalChat()">Send</button>
             </div>
           </div>
+
+          <div class="panel hidden" id="admin-panel" style="margin-top:12px;">
+            <h2>Admin Tools</h2>
+            <div class="admin-grid">
+              <div class="join-box">
+                <input id="admin-target-handle" maxlength="12" placeholder="target handle">
+                <input id="admin-coins" type="number" placeholder="coins +/-">
+                <button onclick="adminGiveCoins()">Give Coins</button>
+              </div>
+              <div class="join-box">
+                <input id="admin-ban-reason" maxlength="120" placeholder="ban reason">
+                <button onclick="adminBanUser()">Ban User</button>
+              </div>
+              <div class="join-box">
+                <input id="admin-announce" maxlength="240" placeholder="server announcement">
+                <button onclick="adminAnnounce()">Send Message</button>
+              </div>
+              <div class="small-note" id="admin-msg"></div>
+            </div>
+          </div>
         </div>
 
         <div class="screen" id="screen-queue">
@@ -583,7 +751,7 @@
                 <div class="points" id="opp-points"></div>
                 <div class="ammo" id="opp-ammo"></div>
               </div>
-              <div class="round" id="round-label">Round 1 of 5</div>
+              <div class="round" id="round-label">Round 1 of 7</div>
               <div class="fighter me" id="me-panel">
                 <div class="fighter-head">
                   <span class="fighter-name" id="me-name">You</span>
@@ -626,6 +794,7 @@
 
             <div class="footer-row">
               <button class="secondary" onclick="goMenu()">Leave Match</button>
+              <button class="secondary" onclick="reportOpponent()">Report Opponent</button>
             </div>
 
             <div class="chat-panel">
@@ -657,7 +826,8 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Name</th>
+                  <th>Handle</th>
+                  <th>User</th>
                   <th>Rating</th>
                   <th>Wins</th>
                   <th>Games</th>
@@ -687,11 +857,42 @@
     </div>
   </div>
 
+  <div class="overlay hidden" id="handle-overlay">
+    <div class="overlay-card">
+      <h3>Choose Your Permanent Handle</h3>
+      <p>Set a unique handle (max 12 chars, letters/numbers/underscore). This is permanent and shown on leaderboards.</p>
+      <div class="identity-row">
+        <input id="handle-input" maxlength="12" placeholder="example_handle">
+        <button onclick="saveHandle()">Confirm Handle</button>
+      </div>
+      <div class="small-note" id="handle-msg"></div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="case-overlay">
+    <div class="overlay-card case-open-card">
+      <div class="case-head">
+        <strong id="case-title">Opening Case</strong>
+        <span id="case-state" class="small-note">Rolling...</span>
+      </div>
+      <div class="case-reel">
+        <div class="case-track" id="case-track"></div>
+        <div class="case-marker"></div>
+      </div>
+      <div class="case-result" id="case-result">Spinning for your drop...</div>
+      <div class="footer-row">
+        <button id="case-close-btn" class="secondary" onclick="closeCaseOverlay()" disabled>Close</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   const WS_BASE = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
   const MAX_BULLETS = 4;
   const ROUNDS_TO_WIN = 3;
   const TOTAL_ROUNDS = 7;
+  const HANDLE_MAX_LEN = 12;
+  const NAME_CHANGE_COOLDOWN_MS = 60 * 60 * 1000;
 
   const MOVES = {
     load: { icon: '[L]', name: 'Load' },
@@ -740,14 +941,20 @@
   let locked = false;
   let currentMatchId = null;
   let oppName = 'Outlaw';
+  let oppHandle = '';
   let duelState = null;
   let globalChatItems = [];
   let gameChatItems = [];
+  let latestRoundInactive = null;
+  let caseAnimating = false;
 
   let G = resetGame();
 
   let profile = {
+    handle: '',
     name: '',
+    nameLastChangedAt: 0,
+    nameLockedUntil: 0,
     rating: 1000,
     coins: 0,
     ownedThemes: ['sunset-gold'],
@@ -797,6 +1004,9 @@
         profile = {
           ...profile,
           ...p,
+          handle: sanitizeHandleValue(p.handle || ''),
+          nameLastChangedAt: Number(p.nameLastChangedAt) || 0,
+          nameLockedUntil: Number(p.nameLockedUntil) || 0,
           ownedThemes: Array.isArray(p.ownedThemes) ? p.ownedThemes : ['sunset-gold'],
           ownedCosmetics: Array.isArray(p.ownedCosmetics) ? p.ownedCosmetics : ['barehead'],
           ownedGuns: Array.isArray(p.ownedGuns) ? p.ownedGuns : ['rust-revolver'],
@@ -817,13 +1027,103 @@
     profile.ownedGuns = uniq(profile.ownedGuns.concat('rust-revolver'));
     profile.ownedCutscenes = uniq(profile.ownedCutscenes.concat('dust-walk'));
 
-    document.getElementById('player-name').value = profile.name;
+    document.getElementById('player-name').value = profile.name || '';
     applyTheme(profile.equippedTheme);
+    updateNameInputCooldownState();
+    ensureHandleOnboarding();
     renderTop();
+  }
+
+  function sanitizeHandleValue(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, HANDLE_MAX_LEN);
   }
 
   function uniq(arr) {
     return Array.from(new Set(arr));
+  }
+
+  function ensureHandleOnboarding() {
+    if (profile.handle) {
+      document.getElementById('handle-overlay').classList.add('hidden');
+      return true;
+    }
+    document.getElementById('handle-overlay').classList.remove('hidden');
+    document.getElementById('handle-msg').textContent = '';
+    return false;
+  }
+
+  function saveHandle() {
+    if (profile.handle) {
+      document.getElementById('handle-overlay').classList.add('hidden');
+      return;
+    }
+
+    const input = document.getElementById('handle-input');
+    const safe = sanitizeHandleValue(input.value);
+    if (!safe || safe.length < 3) {
+      document.getElementById('handle-msg').textContent = 'Handle must be 3-12 chars (letters, numbers, underscore).';
+      return;
+    }
+
+    profile.handle = safe;
+    saveProfile();
+    document.getElementById('handle-overlay').classList.add('hidden');
+    renderTop();
+    syncRating();
+    ensureSocket();
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'hello', name: getPlayerName(), handle: profile.handle, rating: profile.rating }));
+    }
+  }
+
+  function isNameChangeLocked() {
+    const until = Number(profile.nameLockedUntil || 0);
+    return until > Date.now();
+  }
+
+  function updateNameInputCooldownState() {
+    const input = document.getElementById('player-name');
+    if (!input) return;
+
+    if (!isNameChangeLocked()) {
+      input.removeAttribute('title');
+      return;
+    }
+
+    const remain = Math.max(0, Number(profile.nameLockedUntil || 0) - Date.now());
+    const mins = Math.ceil(remain / 60000);
+    input.title = `Username cooldown active (${mins}m left)`;
+  }
+
+  function tryApplyUsernameChange(rawName) {
+    const safe = String(rawName || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[^a-zA-Z0-9 _-]/g, '')
+      .slice(0, 20);
+
+    const next = safe || 'Unnamed Outlaw';
+    if (next === profile.name) return true;
+
+    if (isNameChangeLocked()) {
+      const remain = Math.max(0, Number(profile.nameLockedUntil || 0) - Date.now());
+      const mins = Math.ceil(remain / 60000);
+      showMenuMsg(`Username can be changed every 1 hour. Try again in ${mins}m.`);
+      document.getElementById('player-name').value = profile.name || '';
+      updateNameInputCooldownState();
+      return false;
+    }
+
+    profile.name = next;
+    profile.nameLastChangedAt = Date.now();
+    profile.nameLockedUntil = Date.now() + NAME_CHANGE_COOLDOWN_MS;
+    saveProfile();
+    updateNameInputCooldownState();
+    return true;
   }
 
   function getPlayerName() {
@@ -837,12 +1137,20 @@
 
   async function syncRating() {
     try {
+      if (!profile.handle) return;
       const name = encodeURIComponent(getPlayerName());
-      const res = await fetch(`/api/profile?name=${name}`);
+      const handle = encodeURIComponent(profile.handle);
+      const res = await fetch(`/api/profile?handle=${handle}&name=${name}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.profile) {
+        profile.handle = sanitizeHandleValue(data.profile.handle || profile.handle);
+        profile.name = data.profile.name || profile.name;
+        profile.nameLockedUntil = Number(data.profile.nameLockedUntil) || 0;
         profile.rating = data.profile.rating;
+        profile.coins = Number.isFinite(Number(data.profile.coins)) ? Number(data.profile.coins) : profile.coins;
+        document.getElementById('player-name').value = profile.name;
+        updateNameInputCooldownState();
         renderTop();
         saveProfile();
       }
@@ -850,7 +1158,8 @@
   }
 
   function renderTop() {
-    profile.name = getPlayerName();
+    profile.name = profile.name || getPlayerName();
+    document.getElementById('chip-handle').textContent = profile.handle ? `@${profile.handle}` : 'unset';
     document.getElementById('chip-rating').textContent = String(profile.rating);
     document.getElementById('chip-coins').textContent = String(profile.coins);
     document.getElementById('me-name').textContent = profile.name;
@@ -859,6 +1168,7 @@
     const cosmeticLabel = cosmetic ? cosmetic.label : 'Barehead';
     const gunLabel = gun ? gun.label : 'Rust Revolver';
     document.getElementById('cosmetic-tag').textContent = `${cosmeticLabel} | ${gunLabel}`;
+    document.getElementById('admin-panel').classList.toggle('hidden', profile.handle !== 'jaydenlian');
     saveProfile();
   }
 
@@ -870,8 +1180,10 @@
   }
 
   function startVsAI() {
+    if (!ensureHandleOnboarding()) return;
     mode = 'ai';
     role = 'host';
+    oppHandle = 'ai_bandit';
     oppName = 'Clockwork Bandit';
     G = resetGame();
     locked = false;
@@ -886,9 +1198,11 @@
   }
 
   function queueForMatch() {
+    if (!ensureHandleOnboarding()) return;
     renderTop();
     mode = 'online';
     role = null;
+    oppHandle = '';
     currentMatchId = null;
     document.getElementById('queue-count').textContent = '1 in queue';
     document.getElementById('queue-status').textContent = 'Waiting for duel...';
@@ -918,7 +1232,13 @@
     ws = new WebSocket(`${WS_BASE}/ws/queue`);
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'hello', name: getPlayerName(), rating: profile.rating }));
+      if (!profile.handle) return;
+      ws.send(JSON.stringify({
+        type: 'hello',
+        name: getPlayerName(),
+        handle: profile.handle,
+        rating: profile.rating,
+      }));
     };
 
     ws.onmessage = (evt) => {
@@ -969,6 +1289,62 @@
       return;
     }
 
+    if (msg.type === 'identity') {
+      if (msg.handle) profile.handle = sanitizeHandleValue(msg.handle);
+      if (msg.name) profile.name = msg.name;
+      profile.nameLockedUntil = Number(msg.nameLockedUntil) || profile.nameLockedUntil || 0;
+      if (Number.isFinite(Number(msg.coins))) profile.coins = Number(msg.coins);
+      document.getElementById('player-name').value = profile.name;
+      updateNameInputCooldownState();
+      renderTop();
+      saveProfile();
+      return;
+    }
+
+    if (msg.type === 'identity_required') {
+      ensureHandleOnboarding();
+      showMenuMsg(msg.message || 'Handle required before playing online.');
+      return;
+    }
+
+    if (msg.type === 'banned') {
+      showMenuMsg(msg.message || 'This handle is banned.');
+      setResultText(msg.message || 'Banned from server.');
+      setButtonsDisabled(true);
+      return;
+    }
+
+    if (msg.type === 'coins_update') {
+      if (Number.isFinite(Number(msg.coins))) {
+        profile.coins = Number(msg.coins);
+        renderTop();
+      }
+      return;
+    }
+
+    if (msg.type === 'server_message') {
+      const item = {
+        from: msg.from ? `SERVER ${msg.from}` : 'SERVER',
+        text: msg.message || '',
+        ts: msg.ts || Date.now(),
+      };
+      globalChatItems.push(item);
+      if (globalChatItems.length > 80) globalChatItems.shift();
+      renderGlobalChat();
+      showMenuMsg(msg.message || 'Server message received.');
+      return;
+    }
+
+    if (msg.type === 'report_received') {
+      showMenuMsg(msg.message || (msg.ok ? 'Report submitted.' : 'Report failed.'));
+      return;
+    }
+
+    if (msg.type === 'admin_result') {
+      document.getElementById('admin-msg').textContent = msg.message || (msg.ok ? 'Done.' : 'Failed.');
+      return;
+    }
+
     if (msg.type === 'global_chat') {
       globalChatItems.push(msg.item);
       if (globalChatItems.length > 80) globalChatItems.shift();
@@ -997,8 +1373,10 @@
       const guest = msg.guest || 'Guest';
       if (role === 'host') {
         oppName = guest;
+        oppHandle = msg.guestHandle || '';
       } else {
         oppName = host;
+        oppHandle = msg.hostHandle || '';
       }
       document.getElementById('me-name').textContent = myName;
       document.getElementById('opp-name').textContent = oppName;
@@ -1014,6 +1392,7 @@
 
     if (msg.type === 'start') {
       role = msg.role || role;
+      latestRoundInactive = null;
       currentMatchId = msg.matchId || `online-${Date.now()}`;
       gameChatItems = [];
       renderGameChat();
@@ -1043,6 +1422,7 @@
     if (msg.type === 'round_result' || msg.type === 'game_over') {
       clearDuelState();
       const r = msg.round;
+      latestRoundInactive = r.inactive || null;
       const myMove = role === 'host' ? r.hostMove : r.guestMove;
       const theirMove = role === 'host' ? r.guestMove : r.hostMove;
       const myPoint = role === 'host' ? r.hostPoint : r.guestPoint;
@@ -1483,6 +1863,7 @@
       matchId: currentMatchId,
       mode,
       player: getPlayerName(),
+      playerHandle: profile.handle,
       myScore: G.myScore,
       oppScore: G.oppScore,
     };
@@ -1492,6 +1873,10 @@
     } else {
       if (role !== 'host') return;
       payload.opponent = oppName || 'Guest';
+      payload.opponentHandle = oppHandle || '';
+      payload.hostHandle = profile.handle;
+      payload.guestHandle = oppHandle || '';
+      payload.inactive = latestRoundInactive || null;
     }
 
     try {
@@ -1518,7 +1903,7 @@
 
   async function refreshLeaderboard() {
     const body = document.getElementById('leaderboard-body');
-    body.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+    body.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
 
     try {
       const res = await fetch('/api/leaderboard?limit=15');
@@ -1526,13 +1911,14 @@
       const rows = data.leaderboard || [];
 
       if (!rows.length) {
-        body.innerHTML = '<tr><td colspan="5">No legends yet.</td></tr>';
+        body.innerHTML = '<tr><td colspan="6">No legends yet.</td></tr>';
         return;
       }
 
       body.innerHTML = rows.map((p, i) => `
         <tr>
           <td>${i + 1}</td>
+          <td>@${escapeHtml(p.handle || p.name || 'unknown')}</td>
           <td>${escapeHtml(p.name)}</td>
           <td>${p.rating}</td>
           <td>${p.wins}</td>
@@ -1540,7 +1926,7 @@
         </tr>
       `).join('');
     } catch (_) {
-      body.innerHTML = '<tr><td colspan="5">Could not load leaderboard.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6">Could not load leaderboard.</td></tr>';
     }
   }
 
@@ -1613,13 +1999,26 @@
   }
 
   function openCase(kind) {
+    if (caseAnimating) return;
     const count = Number(profile.caseInventory[kind] || 0);
     if (count <= 0) return showMenuMsg('You do not own that case yet.');
 
     profile.caseInventory[kind] = count - 1;
+    renderTop();
+    renderShop();
 
+    const reward = randomFrom(
+      kind === 'theme' ? THEMES : kind === 'gun' ? GUN_SKINS : CUTSCENES
+    );
+    runCaseAnimation(kind, reward, () => {
+      applyCaseReward(kind, reward);
+      renderTop();
+      renderShop();
+    });
+  }
+
+  function applyCaseReward(kind, reward) {
     if (kind === 'theme') {
-      const reward = randomFrom(THEMES);
       if (profile.ownedThemes.includes(reward.id)) {
         profile.coins += 18;
         showMenuMsg(`Duplicate ${reward.name}. Converted to 18 coins.`);
@@ -1628,7 +2027,6 @@
         showMenuMsg(`Unlocked theme: ${reward.name}`);
       }
     } else if (kind === 'gun') {
-      const reward = randomFrom(GUN_SKINS);
       if (profile.ownedGuns.includes(reward.id)) {
         profile.coins += 22;
         showMenuMsg(`Duplicate ${reward.label}. Converted to 22 coins.`);
@@ -1637,7 +2035,6 @@
         showMenuMsg(`Unlocked gun: ${reward.label}`);
       }
     } else if (kind === 'cutscene') {
-      const reward = randomFrom(CUTSCENES);
       if (profile.ownedCutscenes.includes(reward.id)) {
         profile.coins += 20;
         showMenuMsg(`Duplicate ${reward.label}. Converted to 20 coins.`);
@@ -1646,9 +2043,63 @@
         showMenuMsg(`Unlocked cutscene: ${reward.label}`);
       }
     }
+  }
 
-    renderTop();
-    renderShop();
+  function runCaseAnimation(kind, reward, onDone) {
+    const pool = kind === 'theme' ? THEMES : kind === 'gun' ? GUN_SKINS : CUTSCENES;
+    const overlay = document.getElementById('case-overlay');
+    const track = document.getElementById('case-track');
+    const result = document.getElementById('case-result');
+    const state = document.getElementById('case-state');
+    const closeBtn = document.getElementById('case-close-btn');
+    const title = document.getElementById('case-title');
+
+    caseAnimating = true;
+    closeBtn.disabled = true;
+    title.textContent = `${CASES[kind].name} Opening`;
+    state.textContent = 'Rolling...';
+    result.textContent = 'Spinning for your drop...';
+    overlay.classList.remove('hidden');
+
+    const cardCount = 42;
+    const stopIndex = 30;
+    const list = Array.from({ length: cardCount }, (_, i) => {
+      if (i === stopIndex) return reward;
+      return randomFrom(pool);
+    });
+
+    track.innerHTML = list.map(item => {
+      const label = item.label || item.name;
+      const image = item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(label)}">` : '';
+      return `<div class="case-item">${image}<span>${escapeHtml(label)}</span></div>`;
+    }).join('');
+
+    const cardW = 148;
+    const gap = 10;
+    const viewport = track.parentElement;
+    const centerOffset = Math.max(0, (viewport.clientWidth / 2) - (cardW / 2));
+    const targetX = -((cardW + gap) * stopIndex) + centerOffset;
+    const duration = 4600;
+
+    track.style.transition = 'none';
+    track.style.transform = 'translate3d(0px,0,0)';
+    void track.offsetWidth;
+    track.style.transition = `transform ${duration}ms cubic-bezier(.08,.84,.2,1)`;
+    track.style.transform = `translate3d(${targetX}px,0,0)`;
+
+    setTimeout(() => {
+      const label = reward.label || reward.name;
+      state.textContent = 'Drop ready';
+      result.textContent = `You got: ${label}`;
+      closeBtn.disabled = false;
+      caseAnimating = false;
+      onDone();
+    }, duration + 100);
+  }
+
+  function closeCaseOverlay() {
+    if (caseAnimating) return;
+    document.getElementById('case-overlay').classList.add('hidden');
   }
 
   function equipTheme() {
@@ -1703,6 +2154,50 @@
     }
   }
 
+  function reportOpponent() {
+    if (!ws || ws.readyState !== WebSocket.OPEN || !oppHandle) {
+      showMenuMsg('No opponent handle available to report.');
+      return;
+    }
+
+    const reason = prompt('Report reason (short):');
+    if (!reason || !reason.trim()) return;
+    ws.send(JSON.stringify({
+      type: 'report_user',
+      targetHandle: oppHandle,
+      targetName: oppName,
+      reason: reason.trim().slice(0, 300),
+      context: mode === 'online' ? 'match' : 'menu',
+    }));
+  }
+
+  function getAdminTargetHandle() {
+    return sanitizeHandleValue(document.getElementById('admin-target-handle').value);
+  }
+
+  function adminGiveCoins() {
+    if (profile.handle !== 'jaydenlian') return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const targetHandle = getAdminTargetHandle();
+    const amount = Number(document.getElementById('admin-coins').value || 0);
+    ws.send(JSON.stringify({ type: 'admin_give_coins', targetHandle, amount }));
+  }
+
+  function adminBanUser() {
+    if (profile.handle !== 'jaydenlian') return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const targetHandle = getAdminTargetHandle();
+    const reason = (document.getElementById('admin-ban-reason').value || '').trim();
+    ws.send(JSON.stringify({ type: 'admin_ban', targetHandle, reason }));
+  }
+
+  function adminAnnounce() {
+    if (profile.handle !== 'jaydenlian') return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const text = (document.getElementById('admin-announce').value || '').trim();
+    ws.send(JSON.stringify({ type: 'admin_announce', text }));
+  }
+
   function renderGlobalChat() {
     const log = document.getElementById('global-chat-log');
     if (!log) return;
@@ -1735,11 +2230,19 @@
   }
 
   document.getElementById('player-name').addEventListener('input', () => {
+    if (!tryApplyUsernameChange(document.getElementById('player-name').value)) {
+      return;
+    }
     renderTop();
     syncRating();
     ensureSocket();
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'hello', name: getPlayerName(), rating: profile.rating }));
+      ws.send(JSON.stringify({
+        type: 'hello',
+        name: getPlayerName(),
+        handle: profile.handle,
+        rating: profile.rating,
+      }));
     }
   });
 
@@ -1760,6 +2263,12 @@
   window.equipTheme = equipTheme;
   window.equipGun = equipGun;
   window.equipCutscene = equipCutscene;
+  window.saveHandle = saveHandle;
+  window.closeCaseOverlay = closeCaseOverlay;
+  window.reportOpponent = reportOpponent;
+  window.adminGiveCoins = adminGiveCoins;
+  window.adminBanUser = adminBanUser;
+  window.adminAnnounce = adminAnnounce;
 
   loadProfile();
   ensureSocket();
