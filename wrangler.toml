@@ -1,4 +1,4 @@
-name = "gunslinger"
+name = "frontierlegends"
 main = "./gunslinger/src/worker.js"
 compatibility_date = "2024-11-01"
 
