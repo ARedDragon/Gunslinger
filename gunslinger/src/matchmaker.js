@@ -219,6 +219,15 @@ export class Matchmaker {
       return;
     }
 
+    if (msg.type === 'admin_get_reports') {
+      if (!ADMIN_HANDLES.has(client.handle)) {
+        this.sendTo(id, { type: 'admin_result', ok: false, message: 'Not authorized.' });
+        return;
+      }
+      await this.sendAdminSnapshot(id);
+      return;
+    }
+
     if (!client.roomId) return;
 
     if (msg.type === 'move') {
@@ -247,6 +256,7 @@ export class Matchmaker {
     this.clients.delete(id);
     this.broadcastOnlineCount();
     this.notifyQueueStatus();
+    this.pushAdminPlayerSnapshots();
   }
 
   broadcastAll(msg) {
@@ -260,6 +270,49 @@ export class Matchmaker {
 
   broadcastOnlineCount() {
     this.broadcastAll({ type: 'online_count', online: this.clients.size });
+  }
+
+  async sendAdminSnapshot(id) {
+    this.sendTo(id, {
+      type: 'admin_online_players',
+      players: this.getOnlinePlayersSnapshot(),
+    });
+    this.sendTo(id, {
+      type: 'admin_reports',
+      items: await this.getReports(60),
+    });
+  }
+
+  pushAdminPlayerSnapshots() {
+    const players = this.getOnlinePlayersSnapshot();
+    for (const [id, client] of this.clients.entries()) {
+      if (!ADMIN_HANDLES.has(client.handle)) continue;
+      this.sendTo(id, { type: 'admin_online_players', players });
+    }
+  }
+
+  getOnlinePlayersSnapshot() {
+    const out = [];
+    for (const client of this.clients.values()) {
+      if (!client.handle) continue;
+      out.push({
+        handle: client.handle,
+        name: client.name || 'Outlaw',
+        rating: client.rating || DEFAULT_RATING,
+        inMatch: !!client.roomId,
+      });
+    }
+    out.sort((a, b) => a.handle.localeCompare(b.handle));
+    return out;
+  }
+
+  async getReports(limit) {
+    const rows = [];
+    const list = await this.state.storage.list({ prefix: 'report:', reverse: true, limit: clamp(limit, 1, 200) });
+    for (const [, value] of list) {
+      rows.push(value);
+    }
+    return rows;
   }
 
   async isBannedHandle(handle) {
@@ -300,6 +353,11 @@ export class Matchmaker {
     });
 
     this.sendToClient(reporter, { type: 'report_received', ok: true, message: 'Report sent to admins.' });
+    const reports = await this.getReports(60);
+    for (const [id, client] of this.clients.entries()) {
+      if (!ADMIN_HANDLES.has(client.handle)) continue;
+      this.sendTo(id, { type: 'admin_reports', items: reports });
+    }
   }
 
   async handleAdminBan(admin, msg) {
@@ -327,6 +385,8 @@ export class Matchmaker {
         found.client.ws.close(4003, 'Banned');
       } catch {}
     }
+
+    this.pushAdminPlayerSnapshots();
 
     this.sendToClient(admin, { type: 'admin_result', ok: true, message: `Banned @${targetHandle}.` });
   }

@@ -624,6 +624,23 @@
     text-align: left;
   }
 
+  .admin-list {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.22);
+    padding: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    display: grid;
+    gap: 6px;
+    font-size: 0.76rem;
+  }
+  .admin-list .row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px;
+    align-items: start;
+  }
   .hidden { display: none !important; }
 
   @media (max-width: 920px) {
@@ -662,7 +679,6 @@
               <div class="actions">
                 <button onclick="startVsAI()">Duel AI</button>
                 <button onclick="queueForMatch()">Ranked Queue</button>
-                <button onclick="openTutorial()">Tutorial</button>
                 <button onclick="openLeaderboard()">Leaderboard</button>
                 <button onclick="openShop()">Theme Shop</button>
               </div>
@@ -695,7 +711,8 @@
             <h2>Admin Tools</h2>
             <div class="admin-grid">
               <div class="join-box">
-                <input id="admin-target-handle" maxlength="12" placeholder="target handle">
+                <input id="admin-target-handle" maxlength="12" placeholder="target handle" list="admin-handle-options">
+                <datalist id="admin-handle-options"></datalist>
                 <input id="admin-coins" type="number" placeholder="coins +/-">
                 <button onclick="adminGiveCoins()">Give Coins</button>
               </div>
@@ -707,6 +724,11 @@
                 <input id="admin-announce" maxlength="240" placeholder="server announcement">
                 <button onclick="adminAnnounce()">Send Message</button>
               </div>
+              <div class="join-box">
+                <button onclick="adminRefreshReports()">Refresh Reports</button>
+              </div>
+              <div class="admin-list" id="admin-online-list"></div>
+              <div class="admin-list" id="admin-reports-list"></div>
               <div class="small-note" id="admin-msg"></div>
             </div>
           </div>
@@ -720,22 +742,6 @@
             <p class="small-note" id="queue-status">Waiting for duel...</p>
             <div class="footer-row">
               <button class="secondary" onclick="leaveQueue()">Leave Queue</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="screen" id="screen-tutorial">
-          <div class="panel">
-            <h2>How To Play</h2>
-            <div class="rule-list">
-              <div><strong>1.</strong> Enter your outlaw name, then click Ranked Queue.</div>
-              <div><strong>2.</strong> Matchmaking favors players near your rating, widening over time.</div>
-              <div><strong>3.</strong> Pick one move each round. Only Shoot or Fanfire wins award points.</div>
-              <div><strong>4.</strong> If both Shoot, a reaction duel starts: wait on red, click on green.</div>
-              <div><strong>5.</strong> First to 3 points wins. Use coins for themes and cosmetics.</div>
-            </div>
-            <div class="footer-row">
-              <button class="secondary" onclick="goMenu()">Back</button>
             </div>
           </div>
         </div>
@@ -947,6 +953,8 @@
   let gameChatItems = [];
   let latestRoundInactive = null;
   let caseAnimating = false;
+  let adminOnlinePlayers = [];
+  let adminReports = [];
 
   let G = resetGame();
 
@@ -1220,10 +1228,6 @@
     goMenu();
   }
 
-  function openTutorial() {
-    show('tutorial');
-  }
-
   function ensureSocket() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
       return;
@@ -1298,6 +1302,7 @@
       updateNameInputCooldownState();
       renderTop();
       saveProfile();
+      if (profile.handle === 'jaydenlian') adminRefreshReports();
       return;
     }
 
@@ -1340,8 +1345,23 @@
       return;
     }
 
+    if (msg.type === 'admin_online_players') {
+      adminOnlinePlayers = Array.isArray(msg.players) ? msg.players : [];
+      renderAdminOnlinePlayers();
+      renderAdminHandleOptions();
+      return;
+    }
+
+    if (msg.type === 'admin_reports') {
+      adminReports = Array.isArray(msg.items) ? msg.items : [];
+      renderAdminReports();
+      renderAdminHandleOptions();
+      return;
+    }
+
     if (msg.type === 'admin_result') {
       document.getElementById('admin-msg').textContent = msg.message || (msg.ok ? 'Done.' : 'Failed.');
+      if (msg.ok) adminRefreshReports();
       return;
     }
 
@@ -2160,7 +2180,7 @@
       return;
     }
 
-    const reason = prompt('Report reason (short):');
+    const reason = prompt('Report reason (required):');
     if (!reason || !reason.trim()) return;
     ws.send(JSON.stringify({
       type: 'report_user',
@@ -2169,6 +2189,70 @@
       reason: reason.trim().slice(0, 300),
       context: mode === 'online' ? 'match' : 'menu',
     }));
+  }
+
+  function renderAdminHandleOptions() {
+    const datalist = document.getElementById('admin-handle-options');
+    if (!datalist) return;
+    const set = new Set();
+    for (const p of adminOnlinePlayers) {
+      if (p?.handle) set.add(p.handle);
+    }
+    for (const r of adminReports) {
+      if (r?.targetHandle) set.add(r.targetHandle);
+      if (r?.reporterHandle) set.add(r.reporterHandle);
+    }
+    datalist.innerHTML = Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map(h => `<option value="${escapeHtml(h)}"></option>`)
+      .join('');
+  }
+
+  function renderAdminOnlinePlayers() {
+    const root = document.getElementById('admin-online-list');
+    if (!root) return;
+    if (!adminOnlinePlayers.length) {
+      root.innerHTML = '<div class="small-note">No online players.</div>';
+      return;
+    }
+    root.innerHTML = adminOnlinePlayers.map(p => `
+      <div class="row">
+        <button class="secondary" onclick="setAdminTarget('${escapeHtml(p.handle)}')">Select</button>
+        <div>@${escapeHtml(p.handle)} - ${escapeHtml(p.name || 'Outlaw')} (rating ${Number(p.rating) || 0})${p.inMatch ? ' [in match]' : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderAdminReports() {
+    const root = document.getElementById('admin-reports-list');
+    if (!root) return;
+    if (!adminReports.length) {
+      root.innerHTML = '<div class="small-note">No reports yet.</div>';
+      return;
+    }
+    root.innerHTML = adminReports.map(r => {
+      const when = new Date(r.createdAt || Date.now()).toLocaleString();
+      return `
+        <div class="row">
+          <button class="secondary" onclick="setAdminTarget('${escapeHtml(r.targetHandle || '')}')">Target</button>
+          <div>
+            <div><strong>@${escapeHtml(r.targetHandle || 'unknown')}</strong> reported by @${escapeHtml(r.reporterHandle || 'unknown')}</div>
+            <div>${escapeHtml(r.reason || '')}</div>
+            <div class="small-note">${escapeHtml(when)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function setAdminTarget(handle) {
+    document.getElementById('admin-target-handle').value = sanitizeHandleValue(handle);
+  }
+
+  function adminRefreshReports() {
+    if (profile.handle !== 'jaydenlian') return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'admin_get_reports' }));
   }
 
   function getAdminTargetHandle() {
@@ -2188,6 +2272,10 @@
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     const targetHandle = getAdminTargetHandle();
     const reason = (document.getElementById('admin-ban-reason').value || '').trim();
+    if (!reason) {
+      document.getElementById('admin-msg').textContent = 'Ban reason is required.';
+      return;
+    }
     ws.send(JSON.stringify({ type: 'admin_ban', targetHandle, reason }));
   }
 
@@ -2269,6 +2357,8 @@
   window.adminGiveCoins = adminGiveCoins;
   window.adminBanUser = adminBanUser;
   window.adminAnnounce = adminAnnounce;
+  window.adminRefreshReports = adminRefreshReports;
+  window.setAdminTarget = setAdminTarget;
 
   loadProfile();
   ensureSocket();
