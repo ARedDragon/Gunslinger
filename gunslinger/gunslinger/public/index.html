@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gunslinger: Frontier Legends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&family=Smokum&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-1: #24130a;
+    --bg-2: #120904;
+    --panel: rgba(27, 14, 8, 0.9);
+    --text: #f3dcc0;
+    --muted: #c8a67f;
+    --line: #8f6743;
+    --accent: #f7b34a;
+    --accent-2: #da5f2f;
+    --good: #72c98a;
+    --bad: #e66d5f;
+    --chip: #3b2415;
+    --bullet-on: #c28b20;
+    --bullet-off: #4b3524;
+  }
+
+  body[data-theme="sunset-gold"] {
+    --bg-1: #34190f;
+    --bg-2: #120703;
+    --panel: rgba(40, 18, 10, 0.9);
+    --text: #f9e4cc;
+    --muted: #d8b488;
+    --line: #9f6a3b;
+    --accent: #ffbe4a;
+    --accent-2: #e36d33;
+    --chip: #4a2d18;
+  }
+
+  body[data-theme="sage-noon"] {
+    --bg-1: #1a2a21;
+    --bg-2: #0e1612;
+    --panel: rgba(16, 28, 22, 0.9);
+    --text: #e3f0dd;
+    --muted: #a8c4a6;
+    --line: #5f8266;
+    --accent: #d5d27a;
+    --accent-2: #8cbf7c;
+    --chip: #24362b;
+    --bullet-on: #d6cd5e;
+    --bullet-off: #3c4c3f;
+  }
+
+  body[data-theme="midnight-saloon"] {
+    --bg-1: #14172e;
+    --bg-2: #090b18;
+    --panel: rgba(15, 18, 38, 0.9);
+    --text: #d9defd;
+    --muted: #a9b1e7;
+    --line: #5a65a6;
+    --accent: #ffcd75;
+    --accent-2: #84c5ff;
+    --chip: #24294d;
+    --bullet-on: #ffde7e;
+    --bullet-off: #4b537f;
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(255, 185, 78, 0.13), transparent 30%),
+      radial-gradient(circle at 85% 20%, rgba(255, 122, 74, 0.12), transparent 35%),
+      linear-gradient(140deg, var(--bg-1), var(--bg-2));
+    color: var(--text);
+    font-family: 'Special Elite', cursive;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .page {
+    width: min(1080px, 100%);
+    position: relative;
+    animation: rise 450ms ease-out;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .title-wrap {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: 'Smokum', cursive;
+    font-size: clamp(2.2rem, 8vw, 4.2rem);
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(255, 190, 80, 0.3);
+    margin-bottom: 2px;
+  }
+
+  .tag {
+    color: var(--muted);
+    letter-spacing: 0.24em;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+
+  .shell {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    backdrop-filter: blur(3px);
+    border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    border-bottom: 1px solid var(--line);
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.18);
+    align-items: center;
+  }
+
+  .name-input {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.92rem;
+    letter-spacing: 0.03em;
+  }
+
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--chip);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .chip strong { color: var(--accent); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .content { padding: 16px; }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+  }
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .panel h2 {
+    font-family: 'Rye', cursive;
+    color: var(--accent);
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+
+  .panel p {
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  button {
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 11px 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  }
+
+  button:hover { transform: translateY(-1px); border-color: var(--accent); background: rgba(255, 255, 255, 0.08); }
+  button:active { transform: scale(0.98); }
+  button.secondary { color: var(--muted); }
+
+  .small-note {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .rule-list { margin-top: 10px; display: grid; gap: 6px; }
+  .rule-list div { font-size: 0.8rem; color: var(--muted); }
+  .rule-list strong { color: var(--text); }
+
+  .join-box {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .join-box input {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 10px 12px;
+    letter-spacing: 0.2em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .error { color: var(--bad); font-size: 0.8rem; margin-top: 8px; min-height: 1.1em; }
+
+  .code {
+    margin-top: 10px;
+    font-family: 'Rye', cursive;
+    font-size: clamp(1.8rem, 6vw, 2.8rem);
+    color: var(--accent);
+    text-align: center;
+    letter-spacing: 0.25em;
+  }
+
+  .board {
+    display: grid;
+    gap: 10px;
+  }
+
+  .duel-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .fighter {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .fighter.me { border-color: var(--accent); }
+
+  .fighter-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+  }
+
+  .fighter-name { color: var(--text); }
+  .fighter-move { color: var(--muted); }
+
+  .points { display: flex; gap: 5px; margin-bottom: 8px; }
+  .point {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: transparent;
+  }
+
+  .point.on.me { background: var(--accent); border-color: var(--accent); }
+  .point.on.them { background: var(--accent-2); border-color: var(--accent-2); }
+
+  .ammo {
+    display: flex;
+    gap: 6px;
+  }
+
+  .round {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+  }
+
+  .bullet {
+    width: 11px;
+    height: 22px;
+    border-radius: 5px;
+    background: var(--bullet-on);
+    box-shadow: 0 0 8px rgba(247, 179, 74, 0.35);
+  }
+
+  .bullet.empty {
+    background: var(--bullet-off);
+    box-shadow: none;
+    opacity: 0.55;
+  }
+
+  .result {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    min-height: 84px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+
+  .duel-wrap {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .duel-state {
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+  }
+
+  .duel-btn {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .duel-btn.red {
+    background: rgba(183, 49, 38, 0.35);
+    border-color: #c74f46;
+    color: #ffd6d3;
+  }
+
+  .duel-btn.green {
+    background: rgba(53, 150, 82, 0.35);
+    border-color: #5bc87a;
+    color: #d8ffe3;
+  }
+
+  .result.big {
+    animation: pulse 260ms ease;
+  }
+
+  @keyframes pulse {
+    from { transform: scale(1.02); }
+    to { transform: scale(1); }
+  }
+
+  .move-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .move {
+    min-height: 84px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    gap: 4px;
+  }
+
+  .move .ic { font-size: 1.2rem; }
+  .move .nm { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .move .hint { font-size: 0.64rem; color: var(--muted); }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .table th, .table td {
+    border-bottom: 1px solid var(--line);
+    padding: 8px 6px;
+    text-align: left;
+  }
+
+  .table th { color: var(--muted); font-weight: 400; }
+
+  .shop-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.18);
+    display: grid;
+    gap: 6px;
+  }
+
+  .item h3 {
+    font-size: 0.84rem;
+    color: var(--text);
+    font-family: 'Rye', cursive;
+    letter-spacing: 0.04em;
+  }
+
+  .item p { font-size: 0.76rem; color: var(--muted); }
+
+  .item button { padding: 8px 10px; font-size: 0.74rem; }
+
+  .footer-row {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 920px) {
+    .menu-grid { grid-template-columns: 1fr; }
+    .move-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .duel-row { grid-template-columns: 1fr; }
+    .round { text-align: center; }
+    .shop-grid { grid-template-columns: 1fr; }
+    .topbar { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-theme="sunset-gold">
+  <div class="page">
+    <div class="title-wrap">
+      <h1>Frontier Legends</h1>
+      <div class="tag">High Noon Reimagined</div>
+    </div>
+
+    <div class="shell">
+      <div class="topbar">
+        <input id="player-name" class="name-input" maxlength="20" placeholder="Your outlaw name">
+        <div class="chip">Rating: <strong id="chip-rating">1000</strong></div>
+        <div class="chip">Coins: <strong id="chip-coins">0</strong></div>
+        <div class="chip">Online: <strong id="chip-online">0</strong></div>
+      </div>
+
+      <div class="content">
+
+        <div class="screen active" id="screen-menu">
+          <div class="menu-grid">
+            <div class="panel">
+              <h2>Ride Out</h2>
+              <p>Jump into ranked queue, get matched by similar rating, and duel to climb the frontier rankings.</p>
+              <div class="actions">
+                <button onclick="startVsAI()">Duel AI</button>
+                <button onclick="queueForMatch()">Ranked Queue</button>
+                <button onclick="openTutorial()">Tutorial</button>
+                <button onclick="openLeaderboard()">Leaderboard</button>
+                <button onclick="openShop()">Theme Shop</button>
+              </div>
+              <div class="small-note" id="menu-msg"></div>
+            </div>
+
+            <div class="panel">
+              <h2>Action Book</h2>
+              <div class="rule-list">
+                <div><strong>Load</strong>: +1 ammo (max 4)</div>
+                <div><strong>Shoot</strong>: costs 1 ammo, beats Load + Aim</div>
+                <div><strong>Dodge</strong>: beats Shoot only</div>
+                <div><strong>Aim</strong>: beats Dodge + Load</div>
+                <div><strong>Fanfire</strong>: costs 2 ammo, beats Dodge + Aim + Load</div>
+                <div><strong>Point rule</strong>: only landed shots score (Shoot/Fanfire)</div>
+                <div><strong>Shoot vs Shoot</strong>: red/green reaction duel, click red and you lose</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="screen-queue">
+          <div class="panel">
+            <h2>Ranked Queue</h2>
+            <p>Finding an opponent near your rating...</p>
+            <div class="code" id="queue-count">0 in queue</div>
+            <p class="small-note" id="queue-status">Waiting for duel...</p>
+            <div class="footer-row">
+              <button class="secondary" onclick="leaveQueue()">Leave Queue</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="screen-tutorial">
+          <div class="panel">
+            <h2>How To Play</h2>
+            <div class="rule-list">
+              <div><strong>1.</strong> Enter your outlaw name, then click Ranked Queue.</div>
+              <div><strong>2.</strong> Matchmaking favors players near your rating, widening over time.</div>
+              <div><strong>3.</strong> Pick one move each round. Only Shoot or Fanfire wins award points.</div>
+              <div><strong>4.</strong> If both Shoot, a reaction duel starts: wait on red, click on green.</div>
+              <div><strong>5.</strong> First to 3 points wins. Use coins for themes and cosmetics.</div>
+            </div>
+            <div class="footer-row">
+              <button class="secondary" onclick="goMenu()">Back</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="screen-game">
+          <div class="board">
+            <div class="duel-row">
+              <div class="fighter" id="opp-panel">
+                <div class="fighter-head">
+                  <span class="fighter-name" id="opp-name">Outlaw</span>
+                  <span class="fighter-move" id="opp-ready">Thinking...</span>
+                </div>
+                <div class="points" id="opp-points"></div>
+                <div class="ammo" id="opp-ammo"></div>
+              </div>
+              <div class="round" id="round-label">Round 1 of 5</div>
+              <div class="fighter me" id="me-panel">
+                <div class="fighter-head">
+                  <span class="fighter-name" id="me-name">You</span>
+                  <span class="fighter-move" id="cosmetic-tag">Barehead</span>
+                </div>
+                <div class="points" id="my-points"></div>
+                <div class="ammo" id="my-ammo"></div>
+              </div>
+            </div>
+
+            <div class="result" id="result-box">Choose your action.</div>
+
+            <div class="move-grid">
+              <button class="move" id="btn-load" onclick="sendMove('load')">
+                <div class="ic">[L]</div>
+                <div class="nm">Load</div>
+                <div class="hint">+1 ammo</div>
+              </button>
+              <button class="move" id="btn-shoot" onclick="sendMove('shoot')">
+                <div class="ic">[S]</div>
+                <div class="nm">Shoot</div>
+                <div class="hint">1 ammo</div>
+              </button>
+              <button class="move" id="btn-dodge" onclick="sendMove('dodge')">
+                <div class="ic">[D]</div>
+                <div class="nm">Dodge</div>
+                <div class="hint">Counter shots</div>
+              </button>
+              <button class="move" id="btn-aim" onclick="sendMove('aim')">
+                <div class="ic">[A]</div>
+                <div class="nm">Aim</div>
+                <div class="hint">Beat load/dodge</div>
+              </button>
+              <button class="move" id="btn-fanfire" onclick="sendMove('fanfire')">
+                <div class="ic">[F]</div>
+                <div class="nm">Fanfire</div>
+                <div class="hint">2 ammo power</div>
+              </button>
+            </div>
+
+            <div class="footer-row">
+              <button class="secondary" onclick="goMenu()">Leave Match</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="screen-over">
+          <div class="panel">
+            <h2 id="over-title">Standoff</h2>
+            <p id="over-sub">No one blinked.</p>
+            <div class="footer-row">
+              <button onclick="playAgain()">Play Again</button>
+              <button class="secondary" onclick="goMenu()">Main Menu</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="screen-leaderboard">
+          <div class="panel">
+            <h2>Frontier Leaderboard</h2>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Rating</th>
+                  <th>Wins</th>
+                  <th>Games</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body"></tbody>
+            </table>
+            <div class="footer-row">
+              <button onclick="refreshLeaderboard()">Refresh</button>
+              <button class="secondary" onclick="goMenu()">Back</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="screen-shop">
+          <div class="panel">
+            <h2>Outfitter & Themes</h2>
+            <p>Spend coins from victories to unlock visual styles and cosmetics.</p>
+            <div class="shop-grid" id="shop-grid"></div>
+            <div class="footer-row">
+              <button class="secondary" onclick="goMenu()">Back</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  const WS_BASE = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+  const MAX_BULLETS = 4;
+  const ROUNDS_TO_WIN = 3;
+  const TOTAL_ROUNDS = 5;
+
+  const MOVES = {
+    load: { icon: '[L]', name: 'Load' },
+    shoot: { icon: '[S]', name: 'Shoot' },
+    dodge: { icon: '[D]', name: 'Dodge' },
+    aim: { icon: '[A]', name: 'Aim' },
+    fanfire: { icon: '[F]', name: 'Fanfire' },
+  };
+
+  const THEMES = [
+    { id: 'sunset-gold', name: 'Sunset Gold', cost: 0, type: 'theme' },
+    { id: 'sage-noon', name: 'Sage Noon', cost: 90, type: 'theme' },
+    { id: 'midnight-saloon', name: 'Midnight Saloon', cost: 140, type: 'theme' },
+  ];
+
+  const COSMETICS = [
+    { id: 'barehead', label: 'Barehead', cost: 0 },
+    { id: 'stetson', label: 'Stetson', cost: 60 },
+    { id: 'marshal-badge', label: 'Marshal Badge', cost: 75 },
+    { id: 'silver-spurs', label: 'Silver Spurs', cost: 110 },
+  ];
+
+  let ws = null;
+  let mode = null;
+  let role = null;
+  let locked = false;
+  let currentMatchId = null;
+  let oppName = 'Outlaw';
+  let duelState = null;
+
+  let G = resetGame();
+
+  let profile = {
+    name: '',
+    rating: 1000,
+    coins: 0,
+    ownedThemes: ['sunset-gold'],
+    ownedCosmetics: ['barehead'],
+    equippedTheme: 'sunset-gold',
+    equippedCosmetic: 'barehead',
+  };
+
+  function resetGame() {
+    return { round: 1, myBullets: 1, oppBullets: 1, myScore: 0, oppScore: 0 };
+  }
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.getElementById(`screen-${id}`).classList.add('active');
+  }
+
+  function goMenu() {
+    if (ws) {
+      ws.close();
+      ws = null;
+    }
+    mode = null;
+    role = null;
+    locked = false;
+    currentMatchId = null;
+    clearDuelState();
+    show('menu');
+    renderTop();
+  }
+
+  function saveProfile() {
+    localStorage.setItem('gunslinger.profile.v2', JSON.stringify(profile));
+  }
+
+  function loadProfile() {
+    const raw = localStorage.getItem('gunslinger.profile.v2');
+    if (raw) {
+      try {
+        const p = JSON.parse(raw);
+        profile = {
+          ...profile,
+          ...p,
+          ownedThemes: Array.isArray(p.ownedThemes) ? p.ownedThemes : ['sunset-gold'],
+          ownedCosmetics: Array.isArray(p.ownedCosmetics) ? p.ownedCosmetics : ['barehead'],
+        };
+      } catch (_) {}
+    }
+
+    profile.ownedThemes = uniq(profile.ownedThemes.concat('sunset-gold'));
+    profile.ownedCosmetics = uniq(profile.ownedCosmetics.concat('barehead'));
+
+    document.getElementById('player-name').value = profile.name;
+    applyTheme(profile.equippedTheme);
+    renderTop();
+  }
+
+  function uniq(arr) {
+    return Array.from(new Set(arr));
+  }
+
+  function getPlayerName() {
+    const name = document.getElementById('player-name').value
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[^a-zA-Z0-9 _-]/g, '')
+      .slice(0, 20);
+    return name || 'Unnamed Outlaw';
+  }
+
+  async function syncRating() {
+    try {
+      const name = encodeURIComponent(getPlayerName());
+      const res = await fetch(`/api/profile?name=${name}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.profile) {
+        profile.rating = data.profile.rating;
+        renderTop();
+        saveProfile();
+      }
+    } catch (_) {}
+  }
+
+  function renderTop() {
+    profile.name = getPlayerName();
+    document.getElementById('chip-rating').textContent = String(profile.rating);
+    document.getElementById('chip-coins').textContent = String(profile.coins);
+    document.getElementById('me-name').textContent = profile.name;
+    const cosmetic = COSMETICS.find(c => c.id === profile.equippedCosmetic);
+    document.getElementById('cosmetic-tag').textContent = cosmetic ? cosmetic.label : 'Barehead';
+    saveProfile();
+  }
+
+  function applyTheme(themeId) {
+    if (!THEMES.some(t => t.id === themeId)) themeId = 'sunset-gold';
+    document.body.dataset.theme = themeId;
+    profile.equippedTheme = themeId;
+    saveProfile();
+  }
+
+  function startVsAI() {
+    mode = 'ai';
+    role = 'host';
+    oppName = 'Clockwork Bandit';
+    G = resetGame();
+    locked = false;
+    currentMatchId = `ai-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    document.getElementById('opp-name').textContent = oppName;
+    document.getElementById('opp-ready').textContent = 'Thinking...';
+    show('game');
+    setResultText('Choose your action.');
+    renderBoard();
+  }
+
+  function queueForMatch() {
+    renderTop();
+    mode = 'online';
+    role = null;
+    currentMatchId = null;
+    document.getElementById('queue-count').textContent = '1 in queue';
+    document.getElementById('queue-status').textContent = 'Waiting for duel...';
+    show('queue');
+    connectQueueWS();
+  }
+
+  function leaveQueue() {
+    if (ws && ws.readyState === ws.OPEN) {
+      ws.send(JSON.stringify({ type: 'queue_cancel' }));
+      ws.close();
+      ws = null;
+    }
+    goMenu();
+  }
+
+  function openTutorial() {
+    show('tutorial');
+  }
+
+  function connectQueueWS() {
+    ws = new WebSocket(`${WS_BASE}/ws/queue`);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'intro', name: getPlayerName(), rating: profile.rating }));
+    };
+
+    ws.onmessage = (evt) => {
+      let msg;
+      try { msg = JSON.parse(evt.data); } catch (_) { return; }
+      handleServerMsg(msg);
+    };
+
+    ws.onerror = () => {
+      setResultText('Could not connect to queue.');
+      show('menu');
+    };
+
+    ws.onclose = () => {
+      if (document.getElementById('screen-queue').classList.contains('active')) {
+        document.getElementById('queue-status').textContent = 'Disconnected from queue.';
+      }
+      if (mode === 'online' && document.getElementById('screen-game').classList.contains('active')) {
+        setResultText('Opponent disconnected.');
+        setButtonsDisabled(true);
+      }
+    };
+  }
+
+  function handleServerMsg(msg) {
+    if (msg.type === 'online_count') {
+      document.getElementById('chip-online').textContent = String(msg.online || 0);
+      return;
+    }
+
+    if (msg.type === 'queue_wait') {
+      document.getElementById('queue-count').textContent = `${msg.queueSize || 1} in queue`;
+      document.getElementById('queue-status').textContent = 'Searching for a similarly rated opponent...';
+      return;
+    }
+
+    if (msg.type === 'queue_matched') {
+      document.getElementById('queue-status').textContent = 'Opponent found. Starting match...';
+      return;
+    }
+
+    if (msg.type === 'waiting') {
+      return;
+    }
+
+    if (msg.type === 'player_names') {
+      const myName = getPlayerName();
+      const host = msg.host || 'Host';
+      const guest = msg.guest || 'Guest';
+      if (role === 'host') {
+        oppName = guest;
+      } else {
+        oppName = host;
+      }
+      document.getElementById('me-name').textContent = myName;
+      document.getElementById('opp-name').textContent = oppName;
+      return;
+    }
+
+    if (msg.type === 'start') {
+      role = msg.role || role;
+      currentMatchId = msg.matchId || `online-${Date.now()}`;
+      G = resetGame();
+      clearDuelState();
+      applyGame(msg.game);
+      show('game');
+      locked = false;
+      renderBoard();
+      setResultText('Draw when ready.');
+      return;
+    }
+
+    if (msg.type === 'move_ack') {
+      locked = true;
+      setButtonsDisabled(true);
+      document.getElementById('opp-ready').textContent = 'Waiting...';
+      setResultText('Your move is locked. Waiting for opponent...');
+      return;
+    }
+
+    if (msg.type === 'shootout_start') {
+      startOnlineShootout(msg.roundId, msg.greenAt);
+      return;
+    }
+
+    if (msg.type === 'round_result' || msg.type === 'game_over') {
+      clearDuelState();
+      const r = msg.round;
+      const myMove = role === 'host' ? r.hostMove : r.guestMove;
+      const theirMove = role === 'host' ? r.guestMove : r.hostMove;
+      const myPoint = role === 'host' ? r.hostPoint : r.guestPoint;
+      const theirPoint = role === 'host' ? r.guestPoint : r.hostPoint;
+
+      applyGame(msg.game);
+      locked = false;
+      renderRoundResult(myMove, theirMove, myPoint > 0 ? 'win' : theirPoint > 0 ? 'loss' : 'draw', r.shootout || null);
+      renderBoard();
+
+      if (msg.type === 'game_over') {
+        setTimeout(() => finishGame(), 1200);
+      } else {
+        setTimeout(() => {
+          setButtonsDisabled(false);
+          updateMoveButtons();
+          document.getElementById('opp-ready').textContent = 'Thinking...';
+        }, 900);
+      }
+      return;
+    }
+
+    if (msg.type === 'opponent_left') {
+      setButtonsDisabled(true);
+      setResultText('Opponent left the match.');
+    }
+  }
+
+  function applyGame(game) {
+    if (!game) return;
+    const me = role === 'host' ? game.host : game.guest;
+    const them = role === 'host' ? game.guest : game.host;
+
+    G.round = game.round;
+    G.myBullets = me.bullets;
+    G.oppBullets = them.bullets;
+    G.myScore = me.score;
+    G.oppScore = them.score;
+
+    document.getElementById('opp-ready').textContent = them.moved ? 'Locked' : 'Thinking...';
+  }
+
+  function aiMove() {
+    const choices = validMovesForAmmo(G.oppBullets);
+    const weighted = [];
+    for (const c of choices) {
+      if (c === 'load') weighted.push(c, c);
+      else if (c === 'shoot') weighted.push(c, c);
+      else if (c === 'aim') weighted.push(c, c);
+      else if (c === 'fanfire') weighted.push(c, c);
+      else weighted.push(c);
+    }
+    return weighted[Math.floor(Math.random() * weighted.length)];
+  }
+
+  function validMovesForAmmo(ammo) {
+    const moves = ['load', 'dodge', 'aim'];
+    if (ammo >= 1) moves.push('shoot');
+    if (ammo >= 2) moves.push('fanfire');
+    if (ammo >= MAX_BULLETS) return moves.filter(m => m !== 'load');
+    return moves;
+  }
+
+  function sendMove(move) {
+    if (locked) return;
+    if (duelState && duelState.active) return;
+    if (!canUseMove(move, G.myBullets)) return;
+
+    locked = true;
+
+    if (mode === 'ai') {
+      setButtonsDisabled(true);
+      setResultText('The bandit reads your stance...');
+      setTimeout(() => resolveAIRound(move, aiMove()), 650);
+      return;
+    }
+
+    ws.send(JSON.stringify({ type: 'move', move }));
+  }
+
+  function canUseMove(move, ammo) {
+    if (move === 'shoot' && ammo < 1) return false;
+    if (move === 'fanfire' && ammo < 2) return false;
+    if (move === 'load' && ammo >= MAX_BULLETS) return false;
+    return true;
+  }
+
+  function applyAmmo(ammo, move) {
+    if (move === 'load') return Math.min(MAX_BULLETS, ammo + 1);
+    if (move === 'shoot') return Math.max(0, ammo - 1);
+    if (move === 'fanfire') return Math.max(0, ammo - 2);
+    return ammo;
+  }
+
+  function winningMove(a, b) {
+    if (a === b) return null;
+    const beats = {
+      shoot: ['load', 'aim'],
+      dodge: ['shoot'],
+      load: ['dodge'],
+      aim: ['dodge', 'load'],
+      fanfire: ['dodge', 'aim', 'load'],
+    };
+    if (beats[a] && beats[a].includes(b)) return a;
+    if (beats[b] && beats[b].includes(a)) return b;
+    return null;
+  }
+
+  function resolveAIRound(myMove, theirMove) {
+    G.myBullets = applyAmmo(G.myBullets, myMove);
+    G.oppBullets = applyAmmo(G.oppBullets, theirMove);
+
+    if (myMove === 'shoot' && theirMove === 'shoot') {
+      startAIShootout();
+      return;
+    }
+
+    const winner = winningMove(myMove, theirMove);
+    let myPoint = 0;
+    let theirPoint = 0;
+    if (winner === myMove && isShotMove(myMove)) {
+      G.myScore += 1;
+      myPoint = 1;
+    } else if (winner === theirMove && isShotMove(theirMove)) {
+      G.oppScore += 1;
+      theirPoint = 1;
+    }
+
+    G.round += 1;
+
+    renderRoundResult(myMove, theirMove, myPoint > 0 ? 'win' : theirPoint > 0 ? 'loss' : 'draw');
+    renderBoard();
+
+    const over = G.myScore >= ROUNDS_TO_WIN || G.oppScore >= ROUNDS_TO_WIN || G.round > TOTAL_ROUNDS;
+    if (over) {
+      setTimeout(() => finishGame(), 1200);
+    } else {
+      setTimeout(() => {
+        locked = false;
+        setButtonsDisabled(false);
+        updateMoveButtons();
+      }, 900);
+    }
+  }
+
+  function isShotMove(move) {
+    return move === 'shoot' || move === 'fanfire';
+  }
+
+  function clearDuelState() {
+    if (duelState && duelState.switchTimer) clearTimeout(duelState.switchTimer);
+    if (duelState && duelState.autoTimer) clearTimeout(duelState.autoTimer);
+    duelState = null;
+  }
+
+  function startOnlineShootout(roundId, greenAt) {
+    clearDuelState();
+    locked = true;
+    setButtonsDisabled(true);
+    duelState = {
+      active: true,
+      mode: 'online',
+      roundId,
+      greenAt,
+      canClick: true,
+      switchTimer: null,
+      autoTimer: null,
+    };
+    renderShootoutUI('red');
+    scheduleShootoutTimers();
+  }
+
+  function startAIShootout() {
+    clearDuelState();
+    locked = true;
+    setButtonsDisabled(true);
+    duelState = {
+      active: true,
+      mode: 'ai',
+      roundId: `ai-${Date.now()}`,
+      greenAt: Date.now() + 1200 + Math.floor(Math.random() * 1500),
+      aiReactionMs: 170 + Math.floor(Math.random() * 360),
+      canClick: true,
+      switchTimer: null,
+      autoTimer: null,
+    };
+    renderShootoutUI('red');
+    scheduleShootoutTimers();
+  }
+
+  function scheduleShootoutTimers() {
+    if (!duelState) return;
+    const toGreen = Math.max(0, duelState.greenAt - Date.now());
+
+    duelState.switchTimer = setTimeout(() => {
+      if (!duelState || !duelState.active) return;
+      renderShootoutUI('green');
+    }, toGreen);
+
+    duelState.autoTimer = setTimeout(() => {
+      if (!duelState || !duelState.active || !duelState.canClick) return;
+      duelClick(true);
+    }, toGreen + 2400);
+  }
+
+  function duelClick(auto = false) {
+    if (!duelState || !duelState.active || !duelState.canClick) return;
+    duelState.canClick = false;
+
+    const now = Date.now();
+    const falseStart = now < duelState.greenAt;
+    const reactionMs = falseStart ? 0 : now - duelState.greenAt;
+
+    if (falseStart) {
+      setResultText('False start on red. You lose the round.');
+    } else if (auto) {
+      setResultText('Too slow on green.');
+    } else {
+      setResultText(`Shot at ${reactionMs}ms. Resolving duel...`);
+    }
+
+    if (duelState.mode === 'online') {
+      ws.send(JSON.stringify({
+        type: 'duel_click',
+        roundId: duelState.roundId,
+        falseStart,
+        reactionMs,
+      }));
+      return;
+    }
+
+    finishAIShootout(falseStart, reactionMs, auto);
+  }
+
+  function finishAIShootout(falseStart, reactionMs, autoLoss) {
+    if (!duelState) return;
+
+    let myPoint = 0;
+    let theirPoint = 0;
+    const aiFalseStart = false;
+    const aiReactionMs = duelState.aiReactionMs;
+
+    if (falseStart || autoLoss) {
+      theirPoint = 1;
+    } else if (!aiFalseStart) {
+      if (reactionMs < aiReactionMs) myPoint = 1;
+      else if (aiReactionMs < reactionMs) theirPoint = 1;
+    }
+
+    G.myScore += myPoint;
+    G.oppScore += theirPoint;
+    G.round += 1;
+
+    renderRoundResult('shoot', 'shoot', myPoint > 0 ? 'win' : theirPoint > 0 ? 'loss' : 'draw', {
+      hostFalseStart: false,
+      guestFalseStart: false,
+      hostReactionMs: reactionMs,
+      guestReactionMs: aiReactionMs,
+    });
+    clearDuelState();
+    renderBoard();
+
+    const over = G.myScore >= ROUNDS_TO_WIN || G.oppScore >= ROUNDS_TO_WIN || G.round > TOTAL_ROUNDS;
+    if (over) {
+      setTimeout(() => finishGame(), 1200);
+    } else {
+      setTimeout(() => {
+        locked = false;
+        setButtonsDisabled(false);
+        updateMoveButtons();
+      }, 900);
+    }
+  }
+
+  function renderShootoutUI(stage) {
+    const isGreen = stage === 'green';
+    const stateText = isGreen
+      ? 'GREEN! Click now!'
+      : 'Do not click yet. Clicking on red loses the round.';
+
+    document.getElementById('result-box').innerHTML = `
+      <div class="duel-wrap">
+        <div class="duel-state">Shootout: ${stateText}</div>
+        <button class="duel-btn ${isGreen ? 'green' : 'red'}" onclick="duelClick()">
+          ${isGreen ? 'CLICK GREEN' : 'WAIT - RED'}
+        </button>
+      </div>
+    `;
+  }
+
+  function renderBoard() {
+    renderAmmo('my-ammo', G.myBullets);
+    renderAmmo('opp-ammo', G.oppBullets);
+    renderPoints('my-points', G.myScore, 'me');
+    renderPoints('opp-points', G.oppScore, 'them');
+
+    const r = Math.min(G.round, TOTAL_ROUNDS);
+    document.getElementById('round-label').textContent = `Round ${r} of ${TOTAL_ROUNDS}`;
+    updateMoveButtons();
+  }
+
+  function renderAmmo(id, count) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    for (let i = 0; i < MAX_BULLETS; i++) {
+      const b = document.createElement('div');
+      b.className = `bullet${i < count ? '' : ' empty'}`;
+      el.appendChild(b);
+    }
+  }
+
+  function renderPoints(id, score, who) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    for (let i = 0; i < ROUNDS_TO_WIN; i++) {
+      const d = document.createElement('div');
+      d.className = `point${i < score ? ` on ${who}` : ''}`;
+      el.appendChild(d);
+    }
+  }
+
+  function renderRoundResult(myMove, theirMove, outcome, shootout = null) {
+    const label = outcome === 'win' ? 'You win the round' : outcome === 'loss' ? 'You lose the round' : 'Dead tie';
+    const cls = outcome === 'win' ? 'var(--good)' : outcome === 'loss' ? 'var(--bad)' : 'var(--muted)';
+
+    let shootoutNote = '';
+    if (shootout) {
+      const myFalse = role === 'host' ? shootout.hostFalseStart : shootout.guestFalseStart;
+      const theirFalse = role === 'host' ? shootout.guestFalseStart : shootout.hostFalseStart;
+      const myRxn = role === 'host' ? shootout.hostReactionMs : shootout.guestReactionMs;
+      const theirRxn = role === 'host' ? shootout.guestReactionMs : shootout.hostReactionMs;
+
+      if (myFalse) shootoutNote = 'You clicked on red and lost the duel.';
+      else if (theirFalse) shootoutNote = 'Opponent clicked on red and lost the duel.';
+      else shootoutNote = `Reaction: You ${myRxn}ms vs Opponent ${theirRxn}ms`;
+    }
+
+    const box = document.getElementById('result-box');
+    box.classList.remove('big');
+    void box.offsetWidth;
+    box.classList.add('big');
+    box.innerHTML = `
+      <div style="display:flex; gap:18px; align-items:center; justify-content:center; font-size:0.82rem; color:var(--muted)">
+        <div><div>${MOVES[myMove].icon}</div><div>${MOVES[myMove].name}</div></div>
+        <div>vs</div>
+        <div><div>${MOVES[theirMove].icon}</div><div>${MOVES[theirMove].name}</div></div>
+      </div>
+      <div style="margin-top:6px; color:${cls}; font-family:'Rye',cursive; letter-spacing:.05em">${label}</div>
+      ${shootoutNote ? `<div style="margin-top:4px; color:var(--muted); font-size:0.74rem">${shootoutNote}</div>` : ''}
+    `;
+  }
+
+  function setResultText(text) {
+    document.getElementById('result-box').textContent = text;
+  }
+
+  function setButtonsDisabled(disabled) {
+    ['btn-load', 'btn-shoot', 'btn-dodge', 'btn-aim', 'btn-fanfire'].forEach(id => {
+      document.getElementById(id).disabled = disabled;
+    });
+  }
+
+  function updateMoveButtons() {
+    if (locked) return;
+    document.getElementById('btn-load').disabled = G.myBullets >= MAX_BULLETS;
+    document.getElementById('btn-shoot').disabled = G.myBullets < 1;
+    document.getElementById('btn-fanfire').disabled = G.myBullets < 2;
+    document.getElementById('btn-dodge').disabled = false;
+    document.getElementById('btn-aim').disabled = false;
+  }
+
+  async function finishGame() {
+    let title = 'Standoff';
+    let sub = `Final score: ${G.myScore} - ${G.oppScore}`;
+    let outcome = 'draw';
+
+    if (G.myScore > G.oppScore) {
+      title = 'Legend Grows';
+      sub = `You outdueled ${oppName}: ${G.myScore} - ${G.oppScore}`;
+      outcome = 'win';
+      profile.coins += 45;
+    } else if (G.myScore < G.oppScore) {
+      title = 'Outgunned';
+      sub = `${oppName} took it: ${G.oppScore} - ${G.myScore}`;
+      outcome = 'loss';
+      profile.coins += 15;
+    } else {
+      profile.coins += 25;
+    }
+
+    document.getElementById('over-title').textContent = title;
+    document.getElementById('over-sub').textContent = `${sub} (+${outcome === 'win' ? 45 : outcome === 'loss' ? 15 : 25} coins)`;
+    renderTop();
+
+    await submitMatchResult(outcome);
+    await syncRating();
+
+    show('over');
+  }
+
+  async function submitMatchResult(outcome) {
+    if (!currentMatchId) return;
+
+    const payload = {
+      matchId: currentMatchId,
+      mode,
+      player: getPlayerName(),
+      myScore: G.myScore,
+      oppScore: G.oppScore,
+    };
+
+    if (mode === 'ai') {
+      payload.outcome = outcome;
+    } else {
+      if (role !== 'host') return;
+      payload.opponent = oppName || 'Guest';
+    }
+
+    try {
+      await fetch('/api/match', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (_) {}
+  }
+
+  function playAgain() {
+    if (mode === 'ai') {
+      startVsAI();
+    } else {
+      goMenu();
+    }
+  }
+
+  async function openLeaderboard() {
+    show('leaderboard');
+    await refreshLeaderboard();
+  }
+
+  async function refreshLeaderboard() {
+    const body = document.getElementById('leaderboard-body');
+    body.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+
+    try {
+      const res = await fetch('/api/leaderboard?limit=15');
+      const data = await res.json();
+      const rows = data.leaderboard || [];
+
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5">No legends yet.</td></tr>';
+        return;
+      }
+
+      body.innerHTML = rows.map((p, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(p.name)}</td>
+          <td>${p.rating}</td>
+          <td>${p.wins}</td>
+          <td>${p.games}</td>
+        </tr>
+      `).join('');
+    } catch (_) {
+      body.innerHTML = '<tr><td colspan="5">Could not load leaderboard.</td></tr>';
+    }
+  }
+
+  function openShop() {
+    renderShop();
+    show('shop');
+  }
+
+  function renderShop() {
+    const grid = document.getElementById('shop-grid');
+    const cards = [];
+
+    for (const t of THEMES) {
+      const owned = profile.ownedThemes.includes(t.id);
+      const equipped = profile.equippedTheme === t.id;
+      cards.push(shopItemHtml({
+        id: t.id,
+        name: t.name,
+        desc: 'Visual theme',
+        cost: t.cost,
+        owned,
+        equipped,
+        action: `buyTheme('${t.id}')`,
+      }));
+    }
+
+    for (const c of COSMETICS) {
+      const owned = profile.ownedCosmetics.includes(c.id);
+      const equipped = profile.equippedCosmetic === c.id;
+      cards.push(shopItemHtml({
+        id: c.id,
+        name: c.label,
+        desc: 'Player cosmetic',
+        cost: c.cost,
+        owned,
+        equipped,
+        action: `buyCosmetic('${c.id}')`,
+      }));
+    }
+
+    grid.innerHTML = cards.join('');
+  }
+
+  function shopItemHtml(item) {
+    let label = `Buy (${item.cost}c)`;
+    if (item.equipped) label = 'Equipped';
+    else if (item.owned) label = 'Equip';
+
+    return `
+      <div class="item">
+        <h3>${escapeHtml(item.name)}</h3>
+        <p>${escapeHtml(item.desc)}</p>
+        <button onclick="${item.action}" ${item.equipped ? 'disabled' : ''}>${label}</button>
+      </div>
+    `;
+  }
+
+  function buyTheme(id) {
+    const t = THEMES.find(x => x.id === id);
+    if (!t) return;
+
+    if (!profile.ownedThemes.includes(id)) {
+      if (profile.coins < t.cost) return showMenuMsg('Not enough coins for that theme.');
+      profile.coins -= t.cost;
+      profile.ownedThemes.push(id);
+    }
+
+    profile.equippedTheme = id;
+    applyTheme(id);
+    renderTop();
+    renderShop();
+    showMenuMsg(`Equipped theme: ${t.name}`);
+  }
+
+  function buyCosmetic(id) {
+    const c = COSMETICS.find(x => x.id === id);
+    if (!c) return;
+
+    if (!profile.ownedCosmetics.includes(id)) {
+      if (profile.coins < c.cost) return showMenuMsg('Not enough coins for that cosmetic.');
+      profile.coins -= c.cost;
+      profile.ownedCosmetics.push(id);
+    }
+
+    profile.equippedCosmetic = id;
+    renderTop();
+    renderShop();
+    showMenuMsg(`Equipped cosmetic: ${c.label}`);
+  }
+
+  function showMenuMsg(text) {
+    document.getElementById('menu-msg').textContent = text;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  document.getElementById('player-name').addEventListener('input', () => {
+    renderTop();
+    syncRating();
+  });
+
+  async function refreshOnlineStats() {
+    try {
+      const res = await fetch('/api/online');
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('chip-online').textContent = String(data.online || 0);
+    } catch (_) {}
+  }
+
+  window.duelClick = duelClick;
+
+  loadProfile();
+  renderShop();
+  renderBoard();
+  syncRating();
+  refreshOnlineStats();
+  setInterval(refreshOnlineStats, 10000);
+</script>
+</body>
+</html>
